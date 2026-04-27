@@ -4,7 +4,10 @@
 >
 > Don't take this project too seriously! It's just a sandbox for me to experiment with `wterm`.
 
-Browser wrapper for the interactive `amp` CLI using `wterm`, Vite, React, TypeScript, and a PTY-backed WebSocket bridge.
+<img width="2239" height="1327" alt="amp-web" src="https://github.com/user-attachments/assets/adcecfb6-7c72-42e3-8366-7a5f03d2397e" />
+
+
+Browser wrapper for the interactive `amp` CLI using `wterm` and a PTY-backed WebSocket bridge.
 
 ## Scripts
 
