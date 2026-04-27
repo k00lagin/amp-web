@@ -1,5 +1,9 @@
 # Amp Web
 
+> **⚠️ Warning**
+>
+> Don't take this project too seriously! It's just a sandbox for me to experiment with `wterm`.
+
 Browser wrapper for the interactive `amp` CLI using `wterm`, Vite, React, TypeScript, and a PTY-backed WebSocket bridge.
 
 ## Scripts

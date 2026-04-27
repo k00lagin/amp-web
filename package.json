@@ -1,7 +1,13 @@
 {
   "name": "amp-web",
   "version": "0.1.0",
-  "private": true,
+  "license": "MIT",
+  "description": "Browser wrapper for the interactive amp CLI using wterm",
+  "author": "Vsevolod Kulagin <k00lagin@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/k00lagin/amp-web"
+  },
   "workspaces": [
     "vendor/wterm/*/package"
   ],
