@@ -1,0 +1,165 @@
+:root {
+  color-scheme: dark;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(240, 196, 25, 0.18), transparent 32%),
+    radial-gradient(circle at top right, rgba(80, 157, 255, 0.22), transparent 28%),
+    linear-gradient(135deg, #05070c 0%, #0d1627 54%, #101b2d 100%);
+  color: #f5f7fc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100%;
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100%;
+  padding: 24px;
+}
+
+.frame {
+  display: flex;
+  min-height: calc(100vh - 48px);
+  flex-direction: column;
+  gap: 18px;
+  border: 1px solid rgba(196, 213, 255, 0.15);
+  border-radius: 28px;
+  background: rgba(8, 11, 18, 0.76);
+  box-shadow:
+    0 32px 120px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  backdrop-filter: blur(18px);
+}
+
+.frame__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 24px 0;
+}
+
+.frame__header h1 {
+  margin: 4px 0 0;
+  font-size: clamp(1.8rem, 2.5vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #ffd04d;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-pill {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #d9e2ff;
+  font-size: 0.88rem;
+  text-transform: capitalize;
+}
+
+.status-pill--connected {
+  color: #87f6c3;
+}
+
+.status-pill--disconnected,
+.status-pill--error {
+  color: #ff9c9c;
+}
+
+.restart-button {
+  padding: 10px 14px;
+  border: 1px solid rgba(128, 175, 255, 0.35);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(23, 46, 84, 0.88), rgba(19, 90, 123, 0.92));
+  color: #f5f7fc;
+  cursor: pointer;
+}
+
+.restart-button:hover {
+  border-color: rgba(255, 208, 77, 0.48);
+}
+
+.frame__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 24px;
+  color: #9fb6d9;
+  font-family: "IBM Plex Mono", "Cascadia Code", monospace;
+  font-size: 0.86rem;
+}
+
+.frame__meta span {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px 12px;
+}
+
+.terminal-panel {
+  flex: 1;
+  min-height: 0;
+  padding: 0 16px 16px;
+}
+
+.amp-terminal {
+  height: 100%;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .frame {
+    min-height: calc(100vh - 24px);
+    border-radius: 22px;
+  }
+
+  .frame__header {
+    flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .terminal-panel {
+    padding: 0 10px 10px;
+  }
+}

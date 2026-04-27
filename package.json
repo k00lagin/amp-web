@@ -1,0 +1,42 @@
+{
+  "name": "amp-web",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "vendor/wterm/*/package"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development tsx watch server/index.ts",
+    "build": "vite build",
+    "start": "cross-env NODE_ENV=production tsx server/index.ts",
+    "lint": "oxlint . --deny-warnings",
+    "format": "oxfmt --write index.html package.json README.md tsconfig.json vite.config.ts server src",
+    "format:check": "oxfmt --check index.html package.json README.md tsconfig.json vite.config.ts server src"
+  },
+  "dependencies": {
+    "@wterm/core": "workspace:*",
+    "@wterm/dom": "workspace:*",
+    "@wterm/react": "workspace:*",
+    "express": "^5.1.0",
+    "node-pty": "^1.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.9.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^5.1.0",
+    "cross-env": "^10.1.0",
+    "oxfmt": "^0.46.0",
+    "oxlint": "^1.61.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
+  },
+  "packageManager": "bun@1.3.7"
+}
