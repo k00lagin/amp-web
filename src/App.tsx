@@ -144,14 +144,23 @@ function App() {
       wsRef.current = socket;
 
       socket.binaryType = "arraybuffer";
+      const isCurrentSocket = () => wsRef.current === socket;
 
       socket.addEventListener("open", () => {
+        if (!isCurrentSocket()) {
+          return;
+        }
+
         setConnectionState("connected");
         sendMessage({ type: "resize", cols: terminal.cols, rows: terminal.rows });
         focus();
       });
 
       socket.addEventListener("message", (event) => {
+        if (!isCurrentSocket()) {
+          return;
+        }
+
         if (typeof event.data === "string") {
           write(event.data);
           return;
@@ -163,10 +172,19 @@ function App() {
       });
 
       socket.addEventListener("close", () => {
+        if (!isCurrentSocket()) {
+          return;
+        }
+
+        wsRef.current = null;
         setConnectionState("disconnected");
       });
 
       socket.addEventListener("error", () => {
+        if (!isCurrentSocket()) {
+          return;
+        }
+
         setConnectionState("error");
       });
     },

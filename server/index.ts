@@ -22,6 +22,11 @@ const ampCommand = process.env.AMP_COMMAND ?? "amp";
 
 const pathSeparatorPattern = /[\\/]$/;
 const windowsAbsolutePathPattern = /^(?:[a-zA-Z]:[\\/]|\\\\)/;
+const wsHeartbeatMs = 30_000;
+
+interface HeartbeatWebSocket extends WebSocket {
+  isAlive: boolean;
+}
 
 type ClientMessage =
   | {
@@ -142,6 +147,23 @@ async function createApp() {
   }
 
   const socketServer = new WebSocketServer({ noServer: true });
+  const heartbeatInterval = setInterval(() => {
+    for (const client of socketServer.clients) {
+      const heartbeatClient = client as HeartbeatWebSocket;
+      if (!heartbeatClient.isAlive) {
+        heartbeatClient.terminate();
+        continue;
+      }
+
+      heartbeatClient.isAlive = false;
+      heartbeatClient.ping();
+    }
+  }, wsHeartbeatMs);
+  heartbeatInterval.unref();
+
+  socketServer.on("close", () => {
+    clearInterval(heartbeatInterval);
+  });
 
   httpServer.on("upgrade", (request, socket, head) => {
     const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host}`);
@@ -157,6 +179,12 @@ async function createApp() {
   });
 
   socketServer.on("connection", async (websocket, request) => {
+    const heartbeatSocket = websocket as HeartbeatWebSocket;
+    heartbeatSocket.isAlive = true;
+    websocket.on("pong", () => {
+      heartbeatSocket.isAlive = true;
+    });
+
     let sessionWorkspaceDir: string;
     try {
       sessionWorkspaceDir = await resolveWorkspaceForSession(request.url, workspaceState);
