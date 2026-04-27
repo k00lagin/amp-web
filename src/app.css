@@ -63,8 +63,9 @@
   --tui-font-size: 16px;
   --tui-row-height: 16px;
 
-  font-family: "FiraCodeBox", "Monaspace Neon", "Cascadia Mono", "Cascadia Code",
-    "Consolas", "Menlo", monospace;
+  font-family:
+    "FiraCodeBox", "Monaspace Neon", "Cascadia Mono", "Cascadia Code", "Consolas", "Menlo",
+    monospace;
   font-size: var(--tui-font-size);
   line-height: var(--tui-row-height);
   background: var(--tui-bg);
@@ -215,8 +216,9 @@ button {
    box-drawing glyphs (designed to fill 1em) connect with no gap between
    rows and without per-cell transforms that would distort columns. */
 .wterm.amp-terminal {
-  --term-font-family: "FiraCodeBox", "Monaspace Neon", "Cascadia Mono",
-    "Cascadia Code", "Consolas", "Menlo", monospace;
+  --term-font-family:
+    "FiraCodeBox", "Monaspace Neon", "Cascadia Mono", "Cascadia Code", "Consolas", "Menlo",
+    monospace;
   --term-font-size: 16px;
   --term-line-height: 1;
   --term-row-height: 16px;
@@ -228,7 +230,9 @@ button {
 .wterm .term-row {
   height: var(--term-row-height);
   line-height: var(--term-row-height);
-  font-feature-settings: "calt" 0, "liga" 0;
+  font-feature-settings:
+    "calt" 0,
+    "liga" 0;
   font-variant-ligatures: none;
   /* Clamp the row to its declared height so a glyph whose natural metrics
      exceed 1em (e.g. Fira Code's box-drawing chars after size-adjust) cannot
@@ -251,6 +255,161 @@ button {
 .wterm .term-box-drawing {
   width: 1ch;
   text-align: center;
+}
+
+/* ---------- Workspace picker ---------- */
+.workspace-picker {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--tui-row-height) * 2) 2ch;
+  background: var(--tui-bg);
+  font-family: "Monaspace Neon", monospace;
+  font-size: var(--tui-font-size);
+  line-height: var(--tui-row-height);
+}
+
+.workspace-picker--message {
+  justify-content: flex-start;
+  align-items: flex-start;
+  color: var(--tui-dim);
+  white-space: pre-wrap;
+}
+
+.workspace-picker--error {
+  color: var(--tui-err);
+}
+
+.workspace-picker--dialog {
+  flex: none;
+  width: min(104ch, calc(100vw - 4ch));
+  height: min(calc(var(--tui-row-height) * 34), calc(100vh - var(--tui-row-height) * 4));
+  padding: 0;
+}
+
+.workspace-picker__frame {
+  width: min(104ch, 100%);
+  height: min(calc(var(--tui-row-height) * 34), 100%);
+  min-height: calc(var(--tui-row-height) * 18);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--tui-border);
+  background: var(--tui-bg);
+}
+
+.workspace-picker--dialog .workspace-picker__frame {
+  width: 100%;
+  height: 100%;
+}
+
+.workspace-picker__title {
+  flex: 0 0 var(--tui-row-height);
+  height: var(--tui-row-height);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  padding: 0 1ch;
+  border-bottom: 1px solid var(--tui-border);
+  color: var(--tui-accent);
+  white-space: pre;
+}
+
+.workspace-picker__title-text {
+  flex: 1;
+}
+
+.workspace-picker__input-row {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  flex: 0 0 calc(var(--tui-row-height) * 2);
+  min-width: 0;
+  padding: var(--tui-row-height) 1ch 0;
+}
+
+.workspace-picker__prompt {
+  color: var(--tui-ok);
+}
+
+.workspace-picker__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--tui-row-height);
+  padding: 0;
+  border: none;
+  outline: none;
+  color: var(--tui-fg);
+  background: transparent;
+  font: inherit;
+  line-height: var(--tui-row-height);
+}
+
+.workspace-picker__input:focus {
+  color: var(--tui-accent);
+}
+
+.workspace-picker__notice {
+  flex: 0 0 auto;
+  padding: var(--tui-row-height) 1ch 0;
+  color: var(--tui-err);
+  white-space: pre-wrap;
+}
+
+.workspace-picker__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--tui-row-height) 0;
+}
+
+.workspace-picker__entry {
+  display: flex;
+  width: 100%;
+  height: var(--tui-row-height);
+  line-height: var(--tui-row-height);
+  padding: 0 1ch;
+  text-align: left;
+  white-space: pre;
+}
+
+.workspace-picker__entry:hover,
+.workspace-picker__entry--active {
+  color: var(--tui-bg);
+  background: var(--tui-accent);
+}
+
+.workspace-picker__entry-cursor {
+  flex: 0 0 2ch;
+}
+
+.workspace-picker__entry-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-picker__empty {
+  padding: 0 1ch;
+  color: var(--tui-dim);
+  white-space: pre;
+}
+
+.workspace-picker__footer {
+  flex: 0 0 var(--tui-row-height);
+  height: var(--tui-row-height);
+  padding: 0 1ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-top: 1px solid var(--tui-border);
+  color: var(--tui-dim);
+  white-space: nowrap;
+}
+
+.workspace-picker__footer--error {
+  color: var(--tui-err);
 }
 
 /* ---------- TUI popup ---------- */
@@ -311,7 +470,9 @@ button {
   overflow: auto;
   padding: var(--tui-row-height) 1ch;
   white-space: pre;
-  font-feature-settings: "calt" 0, "liga" 0;
+  font-feature-settings:
+    "calt" 0,
+    "liga" 0;
 }
 
 .tui-popup__body--error {

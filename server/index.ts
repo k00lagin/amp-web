@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { createServer as createNodeServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -16,8 +17,11 @@ const clientRoot = projectRoot;
 const distRoot = path.join(projectRoot, "dist");
 const host = process.env.HOST ?? "127.0.0.1";
 const port = Number(process.env.PORT ?? 3000);
-const workspaceDir = process.env.AMP_WORKSPACE ?? projectRoot;
+const envWorkspaceDir = process.env.AMP_WORKSPACE;
 const ampCommand = process.env.AMP_COMMAND ?? "amp";
+
+const pathSeparatorPattern = /[\\/]$/;
+const windowsAbsolutePathPattern = /^(?:[a-zA-Z]:[\\/]|\\\\)/;
 
 type ClientMessage =
   | {
@@ -30,10 +34,27 @@ type ClientMessage =
       rows: number;
     };
 
+interface WorkspaceState {
+  defaultPath: string;
+  envWorkspaceDir: string | null;
+  envWorkspaceValid: boolean;
+  platform: NodeJS.Platform;
+  requiresSelection: boolean;
+  workspaceDir: string | null;
+}
+
+interface BrowseEntry {
+  name: string;
+  fullPath: string;
+}
+
 async function createApp() {
   const app = express();
   const httpServer = createNodeServer(app);
   const isProduction = process.env.NODE_ENV === "production";
+  const workspaceState = await resolveWorkspaceState();
+
+  app.use(express.json());
 
   app.get("/health", (_request, response) => {
     response.json({
@@ -41,8 +62,41 @@ async function createApp() {
       host,
       ok: true,
       port,
-      workspaceDir,
+      workspaceDir: workspaceState.workspaceDir,
     });
+  });
+
+  app.get("/api/workspace", (_request, response) => {
+    response.json(workspaceState);
+  });
+
+  app.get("/api/workspace/browse", async (request, response) => {
+    try {
+      const inputPath = typeof request.query.path === "string" ? request.query.path : "";
+      if (!inputPath.trim()) {
+        response.status(400).json({ error: "Path is required." });
+        return;
+      }
+
+      response.json(await browseWorkspacePath(inputPath));
+    } catch (error) {
+      response.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.post("/api/workspace/validate", async (request, response) => {
+    try {
+      const inputPath = typeof request.body?.path === "string" ? request.body.path : "";
+      if (!inputPath.trim()) {
+        response.status(400).json({ error: "Path is required." });
+        return;
+      }
+
+      const workspaceDir = await validateWorkspaceDir(inputPath);
+      response.json({ workspaceDir });
+    } catch (error) {
+      response.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+    }
   });
 
   app.get("/api/usage", async (_request, response) => {
@@ -102,10 +156,18 @@ async function createApp() {
     });
   });
 
-  socketServer.on("connection", (websocket) => {
+  socketServer.on("connection", async (websocket, request) => {
+    let sessionWorkspaceDir: string;
+    try {
+      sessionWorkspaceDir = await resolveWorkspaceForSession(request.url, workspaceState);
+    } catch (error) {
+      websocket.close(1008, error instanceof Error ? error.message : String(error));
+      return;
+    }
+
     const terminal = pty.spawn(resolveShell(), resolveShellArgs(ampCommand), {
       cols: 120,
-      cwd: workspaceDir,
+      cwd: sessionWorkspaceDir,
       env: {
         ...process.env,
         COLORTERM: "truecolor",
@@ -187,20 +249,135 @@ function parseMessage(payload: string): ClientMessage | null {
   return null;
 }
 
+async function resolveWorkspaceState(): Promise<WorkspaceState> {
+  const envResolved = envWorkspaceDir ? resolveInputPath(envWorkspaceDir) : null;
+  const envValid = envResolved ? await isDirectory(envResolved) : false;
+  const fallbackDefaultPath = await resolveDefaultBrowsePath();
+
+  return {
+    defaultPath:
+      envValid && envResolved ? ensureTrailingSeparator(envResolved) : fallbackDefaultPath,
+    envWorkspaceDir: envResolved,
+    envWorkspaceValid: envValid,
+    platform: process.platform,
+    requiresSelection: !envValid,
+    workspaceDir: envValid && envResolved ? envResolved : null,
+  };
+}
+
+async function resolveDefaultBrowsePath(): Promise<string> {
+  const homeDir = os.homedir();
+  if (homeDir && (await isDirectory(homeDir))) {
+    return ensureTrailingSeparator(homeDir);
+  }
+
+  return ensureTrailingSeparator(projectRoot);
+}
+
+async function resolveWorkspaceForSession(
+  requestUrl: string | undefined,
+  workspaceState: WorkspaceState,
+): Promise<string> {
+  const parsedUrl = new URL(requestUrl ?? "/", `http://${host}:${port}`);
+  const workspaceParam = parsedUrl.searchParams.get("workspace");
+
+  if (workspaceParam?.trim()) {
+    return validateWorkspaceDir(workspaceParam);
+  }
+
+  if (workspaceState.workspaceDir) {
+    return workspaceState.workspaceDir;
+  }
+
+  throw new Error("Workspace selection is required.");
+}
+
+async function browseWorkspacePath(inputPath: string) {
+  const resolvedInputPath = resolveInputPath(inputPath);
+  const endsWithSeparator = pathSeparatorPattern.test(inputPath) || inputPath.trim() === "~";
+  const parentPath = endsWithSeparator ? resolvedInputPath : path.dirname(resolvedInputPath);
+  const prefix = endsWithSeparator ? "" : path.basename(resolvedInputPath);
+  const dirents = await readdir(parentPath, { withFileTypes: true });
+  const showHidden = endsWithSeparator || prefix.startsWith(".");
+  const lowerPrefix = prefix.toLowerCase();
+  const entries: BrowseEntry[] = dirents
+    .filter(
+      (dirent) =>
+        dirent.isDirectory() &&
+        dirent.name.toLowerCase().startsWith(lowerPrefix) &&
+        (showHidden || !dirent.name.startsWith(".")),
+    )
+    .map((dirent) => ({
+      fullPath: path.join(parentPath, dirent.name),
+      name: dirent.name,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  return { entries, parentPath };
+}
+
+async function validateWorkspaceDir(inputPath: string): Promise<string> {
+  const resolvedPath = resolveInputPath(inputPath);
+  const stats = await stat(resolvedPath);
+  if (!stats.isDirectory()) {
+    throw new Error(`Workspace is not a directory: ${resolvedPath}`);
+  }
+  return resolvedPath;
+}
+
+async function isDirectory(inputPath: string): Promise<boolean> {
+  try {
+    return (await stat(inputPath)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function resolveInputPath(inputPath: string): string {
+  const trimmedPath = inputPath.trim();
+  if (process.platform !== "win32" && windowsAbsolutePathPattern.test(trimmedPath)) {
+    throw new Error("Windows-style paths are only supported on Windows.");
+  }
+
+  return path.resolve(expandHomePath(trimmedPath));
+}
+
+function expandHomePath(inputPath: string): string {
+  if (inputPath === "~") {
+    return os.homedir();
+  }
+
+  if (inputPath.startsWith("~/") || inputPath.startsWith("~\\")) {
+    return path.join(os.homedir(), inputPath.slice(2));
+  }
+
+  return inputPath;
+}
+
+function ensureTrailingSeparator(inputPath: string): string {
+  if (pathSeparatorPattern.test(inputPath)) {
+    return inputPath;
+  }
+
+  return `${inputPath}${path.sep}`;
+}
+
 function runAmpUsage(): Promise<string> {
   return new Promise((resolve, reject) => {
     const isWin = process.platform === "win32";
     const command = `${ampCommand} usage`;
-    const child = spawn(isWin ? (process.env.COMSPEC ?? "cmd.exe") : "/bin/sh", isWin
-      ? ["/d", "/s", "/c", command]
-      : ["-lc", command], {
-      cwd: workspaceDir,
-      env: {
-        ...process.env,
-        COLORTERM: "truecolor",
-        TERM: "xterm-256color",
+    const child = spawn(
+      isWin ? (process.env.COMSPEC ?? "cmd.exe") : "/bin/sh",
+      isWin ? ["/d", "/s", "/c", command] : ["-lc", command],
+      {
+        cwd: envWorkspaceDir ?? projectRoot,
+        env: {
+          ...process.env,
+          COLORTERM: "truecolor",
+          TERM: "xterm-256color",
+        },
       },
-    });
+    );
 
     let stdout = "";
     let stderr = "";
