@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { createServer as createNodeServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -42,6 +43,18 @@ async function createApp() {
       port,
       workspaceDir,
     });
+  });
+
+  app.get("/api/usage", async (_request, response) => {
+    try {
+      const output = await runAmpUsage();
+      response.type("text/plain").send(output);
+    } catch (error) {
+      response
+        .status(500)
+        .type("text/plain")
+        .send(error instanceof Error ? error.message : String(error));
+    }
   });
 
   if (isProduction) {
@@ -172,6 +185,44 @@ function parseMessage(payload: string): ClientMessage | null {
   }
 
   return null;
+}
+
+function runAmpUsage(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const isWin = process.platform === "win32";
+    const command = `${ampCommand} usage`;
+    const child = spawn(isWin ? (process.env.COMSPEC ?? "cmd.exe") : "/bin/sh", isWin
+      ? ["/d", "/s", "/c", command]
+      : ["-lc", command], {
+      cwd: workspaceDir,
+      env: {
+        ...process.env,
+        COLORTERM: "truecolor",
+        TERM: "xterm-256color",
+      },
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+
+    child.on("error", (error) => reject(error));
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve(stdout || stderr);
+      } else {
+        reject(new Error(stderr || stdout || `amp usage exited with code ${code}`));
+      }
+    });
+  });
 }
 
 function resolveShell() {

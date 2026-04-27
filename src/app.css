@@ -1,11 +1,77 @@
+/* Monaspace Neon — primary font for all glyphs except box-drawing /
+   block-element / geometric-shape ranges, which Monaspace draws visibly
+   narrower than the cell width (causing gaps and shifted right walls). */
+@font-face {
+  font-family: "Monaspace Neon";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/githubnext/monaspace@v1.101/fonts/webfonts/MonaspaceNeon-Regular.woff2")
+    format("woff2");
+}
+@font-face {
+  font-family: "Monaspace Neon";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/githubnext/monaspace@v1.101/fonts/webfonts/MonaspaceNeon-Bold.woff2")
+    format("woff2");
+}
+
+/* Fira Code — used ONLY for box-drawing / block-element / geometric-shape
+   characters via unicode-range. Fira Code's box-drawing glyphs span the full
+   cell so tables and frames render with no seams. Loaded as a webfont so it's
+   guaranteed available regardless of locally installed fonts. */
+@font-face {
+  font-family: "FiraCodeBox";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/woff2/FiraCode-Regular.woff2")
+    format("woff2");
+  unicode-range: U+2500-25FF, U+2580-259F;
+  /* Fira Code's box-drawing glyphs are a hair narrower than Monaspace Neon's
+     1ch cell; a tiny size-adjust closes the gap so border rows match the
+     width of inner content rows. Excess (sub-pixel) is clipped by the
+     per-cell overflow: hidden below, so neighbours don't leak. */
+  size-adjust: 101%;
+}
+@font-face {
+  font-family: "FiraCodeBox";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/woff2/FiraCode-Bold.woff2")
+    format("woff2");
+  unicode-range: U+2500-25FF, U+2580-259F;
+  size-adjust: 101%;
+}
+
 :root {
   color-scheme: dark;
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(240, 196, 25, 0.18), transparent 32%),
-    radial-gradient(circle at top right, rgba(80, 157, 255, 0.22), transparent 28%),
-    linear-gradient(135deg, #05070c 0%, #0d1627 54%, #101b2d 100%);
-  color: #f5f7fc;
+  /* Match wterm monokai theme background */
+  --tui-bg: #272822;
+  --tui-fg: #f8f8f2;
+  --tui-dim: #75715e;
+  --tui-accent: #f4bf75;
+  --tui-ok: #a6e22e;
+  --tui-err: #f92672;
+  --tui-muted-bg: #1f201b;
+  --tui-border: #49483e;
+
+  /* font-size == row-height eliminates inter-row seams in box drawing */
+  --tui-font-size: 16px;
+  --tui-row-height: 16px;
+
+  font-family: "FiraCodeBox", "Monaspace Neon", "Cascadia Mono", "Cascadia Code",
+    "Consolas", "Menlo", monospace;
+  font-size: var(--tui-font-size);
+  line-height: var(--tui-row-height);
+  background: var(--tui-bg);
+  color: var(--tui-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
 }
 
 * {
@@ -17,149 +83,250 @@ body,
 #root {
   height: 100%;
   margin: 0;
-}
-
-body {
-  min-height: 100%;
+  overflow: hidden;
 }
 
 button {
   font: inherit;
-}
-
-.app-shell {
-  min-height: 100%;
-  padding: 24px;
-}
-
-.frame {
-  display: flex;
-  min-height: calc(100vh - 48px);
-  flex-direction: column;
-  gap: 18px;
-  border: 1px solid rgba(196, 213, 255, 0.15);
-  border-radius: 28px;
-  background: rgba(8, 11, 18, 0.76);
-  box-shadow:
-    0 32px 120px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  overflow: hidden;
-  backdrop-filter: blur(18px);
-}
-
-.frame__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 24px 24px 0;
-}
-
-.frame__header h1 {
-  margin: 4px 0 0;
-  font-size: clamp(1.8rem, 2.5vw, 2.6rem);
-  font-weight: 600;
-  letter-spacing: -0.04em;
-}
-
-.eyebrow {
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
   margin: 0;
-  color: #ffd04d;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.status-pill {
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: #d9e2ff;
-  font-size: 0.88rem;
-  text-transform: capitalize;
-}
-
-.status-pill--connected {
-  color: #87f6c3;
-}
-
-.status-pill--disconnected,
-.status-pill--error {
-  color: #ff9c9c;
-}
-
-.restart-button {
-  padding: 10px 14px;
-  border: 1px solid rgba(128, 175, 255, 0.35);
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgba(23, 46, 84, 0.88), rgba(19, 90, 123, 0.92));
-  color: #f5f7fc;
   cursor: pointer;
 }
 
-.restart-button:hover {
-  border-color: rgba(255, 208, 77, 0.48);
-}
-
-.frame__meta {
+/* ---------- App layout ---------- */
+.app-shell {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 0 24px;
-  color: #9fb6d9;
-  font-family: "IBM Plex Mono", "Cascadia Code", monospace;
-  font-size: 0.86rem;
-}
-
-.frame__meta span {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 8px 12px;
-}
-
-.terminal-panel {
-  flex: 1;
-  min-height: 0;
-  padding: 0 16px 16px;
-}
-
-.amp-terminal {
-  height: 100%;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.34);
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: var(--tui-bg);
   overflow: hidden;
 }
 
-@media (max-width: 720px) {
-  .app-shell {
-    padding: 12px;
-  }
+/* ---------- TUI toolbar (single char row) ---------- */
+.tui-toolbar {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 var(--tui-row-height);
+  height: var(--tui-row-height);
+  font-family: "Monaspace Neon", monospace;
+  font-size: var(--tui-font-size);
+  line-height: var(--tui-row-height);
+  color: var(--tui-fg);
+  background: var(--tui-bg);
+  user-select: none;
+  white-space: pre;
+  overflow: hidden;
+}
 
-  .frame {
-    min-height: calc(100vh - 24px);
-    border-radius: 22px;
-  }
+.tui-toolbar__row {
+  display: flex;
+  align-items: center;
+  height: var(--tui-row-height);
+  line-height: var(--tui-row-height);
+  padding: 0 1ch;
+  gap: 2ch;
+}
 
-  .frame__header {
-    flex-direction: column;
-  }
+.tui-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 1ch;
+  color: var(--tui-dim);
+}
 
-  .header-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
+.tui-status__dot {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
+}
 
-  .terminal-panel {
-    padding: 0 10px 10px;
-  }
+.tui-status--connected .tui-status__dot {
+  color: var(--tui-ok);
+}
+.tui-status--connected .tui-status__label {
+  color: var(--tui-ok);
+}
+
+.tui-status--connecting .tui-status__dot {
+  color: var(--tui-accent);
+}
+.tui-status--connecting .tui-status__label {
+  color: var(--tui-accent);
+}
+
+.tui-status--disconnected .tui-status__dot,
+.tui-status--error .tui-status__dot {
+  color: var(--tui-err);
+}
+.tui-status--disconnected .tui-status__label,
+.tui-status--error .tui-status__label {
+  color: var(--tui-err);
+}
+
+.tui-toolbar__spacer {
+  flex: 1;
+}
+
+.tui-button {
+  color: var(--tui-fg);
+  padding: 0 1ch;
+  height: var(--tui-row-height);
+  line-height: var(--tui-row-height);
+  white-space: pre;
+}
+
+.tui-button:hover {
+  color: var(--tui-bg);
+  background: var(--tui-accent);
+}
+
+.tui-button:focus-visible {
+  outline: 1px dashed var(--tui-accent);
+  outline-offset: -1px;
+}
+
+.tui-button[disabled] {
+  color: var(--tui-dim);
+  cursor: not-allowed;
+}
+
+/* ---------- Terminal area ---------- */
+.terminal-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  background: var(--tui-bg);
+}
+
+.amp-terminal {
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+/* Override wterm CSS to use Monaspace Neon and remove visible row seams.
+   Setting line-height == font-size makes each row exactly one em tall, so
+   box-drawing glyphs (designed to fill 1em) connect with no gap between
+   rows and without per-cell transforms that would distort columns. */
+.wterm.amp-terminal {
+  --term-font-family: "FiraCodeBox", "Monaspace Neon", "Cascadia Mono",
+    "Cascadia Code", "Consolas", "Menlo", monospace;
+  --term-font-size: 16px;
+  --term-line-height: 1;
+  --term-row-height: 16px;
+  padding: 4px 8px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.wterm .term-row {
+  height: var(--term-row-height);
+  line-height: var(--term-row-height);
+  font-feature-settings: "calt" 0, "liga" 0;
+  font-variant-ligatures: none;
+  /* Clamp the row to its declared height so a glyph whose natural metrics
+     exceed 1em (e.g. Fira Code's box-drawing chars after size-adjust) cannot
+     bleed into the next row. */
+  overflow: hidden;
+}
+
+.wterm .term-row > span {
+  display: inline-block;
+  height: var(--term-row-height);
+  line-height: var(--term-row-height);
+  vertical-align: top;
+  /* Cell clips horizontal/vertical glyph overflow so a scaled box-drawing
+     char (Fira Code, size-adjusted) cannot push into neighbouring cells.
+     wterm's own .term-block already sets width: 1ch, so wide cells (CJK)
+     are unaffected. */
+  overflow: hidden;
+}
+
+.wterm .term-box-drawing {
+  width: 1ch;
+  text-align: center;
+}
+
+/* ---------- TUI popup ---------- */
+.tui-popup__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: calc(var(--tui-row-height) * 2);
+}
+
+.tui-popup {
+  background: var(--tui-bg);
+  color: var(--tui-fg);
+  font-family: "Monaspace Neon", monospace;
+  font-size: var(--tui-font-size);
+  line-height: var(--tui-row-height);
+  border: 1px solid var(--tui-border);
+  width: min(960px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 0 1px var(--tui-bg);
+}
+
+.tui-popup__title {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  height: var(--tui-row-height);
+  line-height: var(--tui-row-height);
+  padding: 0 1ch;
+  border-bottom: 1px solid var(--tui-border);
+  color: var(--tui-accent);
+  white-space: pre;
+}
+
+.tui-popup__title-text {
+  flex: 1;
+}
+
+.tui-popup__close {
+  color: var(--tui-fg);
+  padding: 0 1ch;
+}
+
+.tui-popup__close:hover {
+  color: var(--tui-bg);
+  background: var(--tui-err);
+}
+
+.tui-popup__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--tui-row-height) 1ch;
+  white-space: pre;
+  font-feature-settings: "calt" 0, "liga" 0;
+}
+
+.tui-popup__body--error {
+  color: var(--tui-err);
+}
+
+.tui-popup__body--loading {
+  color: var(--tui-dim);
+}
+
+.tui-popup__hint {
+  border-top: 1px solid var(--tui-border);
+  padding: 0 1ch;
+  height: var(--tui-row-height);
+  line-height: var(--tui-row-height);
+  color: var(--tui-dim);
+  white-space: pre;
 }

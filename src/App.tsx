@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { WTerm } from "@wterm/dom";
 import { Terminal, useTerminal } from "@wterm/react";
@@ -16,6 +16,12 @@ type ClientMessage =
       rows: number;
     };
 
+type UsageState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "loaded"; output: string }
+  | { status: "error"; message: string };
+
 const TERMINAL_ENDPOINT = "/ws/amp";
 
 function App() {
@@ -23,11 +29,7 @@ function App() {
   const wsRef = useRef<WebSocket | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
   const [sessionNumber, setSessionNumber] = useState(1);
-
-  const endpointLabel = useMemo(() => {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${protocol}://${window.location.host}${TERMINAL_ENDPOINT}`;
-  }, []);
+  const [usage, setUsage] = useState<UsageState>({ status: "idle" });
 
   const closeSession = useCallback(() => {
     wsRef.current?.close(1000, "Client restart requested");
@@ -107,44 +109,153 @@ function App() {
     setConnectionState("connecting");
   }, [closeSession]);
 
+  const handleUsage = useCallback(async () => {
+    setUsage({ status: "loading" });
+    try {
+      const response = await fetch("/api/usage");
+      const text = await response.text();
+      if (!response.ok) {
+        setUsage({ status: "error", message: text || `HTTP ${response.status}` });
+        return;
+      }
+      setUsage({ status: "loaded", output: text });
+    } catch (error) {
+      setUsage({
+        status: "error",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, []);
+
+  const closeUsage = useCallback(() => {
+    setUsage({ status: "idle" });
+    focus();
+  }, [focus]);
+
+  useEffect(() => {
+    if (usage.status === "idle") {
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeUsage();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [usage.status, closeUsage]);
+
+  const statusLabel: Record<ConnectionState, string> = {
+    connecting: "connecting",
+    connected: "connected",
+    disconnected: "disconnected",
+    error: "error",
+  };
+
+  const statusDot: Record<ConnectionState, string> = {
+    connecting: "◌",
+    connected: "●",
+    disconnected: "○",
+    error: "✗",
+  };
+
   return (
     <main className="app-shell">
-      <section className="frame">
-        <header className="frame__header">
-          <div>
-            <p className="eyebrow">Local endpoint</p>
-            <h1>Amp Web Terminal</h1>
-          </div>
+      <div className="tui-toolbar">
+        <div className="tui-toolbar__row">
+          <span className={`tui-status tui-status--${connectionState}`}>
+            <span className="tui-status__dot">{statusDot[connectionState]}</span>
+            <span className="tui-status__label">{statusLabel[connectionState]}</span>
+          </span>
 
-          <div className="header-actions">
-            <span className={`status-pill status-pill--${connectionState}`}>{connectionState}</span>
-            <button className="restart-button" onClick={handleRestart} type="button">
-              Restart session
-            </button>
-          </div>
-        </header>
+          <span className="tui-toolbar__spacer" />
 
-        <div className="frame__meta">
-          <span>{window.location.origin}</span>
-          <span>{endpointLabel}</span>
+          <button
+            className="tui-button"
+            type="button"
+            onClick={handleUsage}
+            disabled={usage.status === "loading"}
+            title="Run `amp usage` and show the result"
+          >
+            [ amp usage ]
+          </button>
+
+          <button
+            className="tui-button"
+            type="button"
+            onClick={handleRestart}
+            title="Restart the Amp session"
+          >
+            [ reset ]
+          </button>
         </div>
+      </div>
 
-        <div className="terminal-panel">
-          <Terminal
-            key={sessionNumber}
-            ref={ref}
-            autoResize
-            className="amp-terminal"
-            cursorBlink
-            onData={handleInput}
-            onReady={handleReady}
-            onResize={handleResize}
-            rows={32}
-            theme="monokai"
-          />
-        </div>
-      </section>
+      <div className="terminal-host">
+        <Terminal
+          key={sessionNumber}
+          ref={ref}
+          autoResize
+          className="amp-terminal"
+          cursorBlink
+          onData={handleInput}
+          onReady={handleReady}
+          onResize={handleResize}
+          rows={32}
+          theme="monokai"
+        />
+      </div>
+
+      {usage.status !== "idle" && <UsagePopup state={usage} onClose={closeUsage} />}
     </main>
+  );
+}
+
+function UsagePopup({
+  state,
+  onClose,
+}: {
+  state: Exclude<UsageState, { status: "idle" }>;
+  onClose: () => void;
+}) {
+  return (
+    <div className="tui-popup__backdrop" onClick={onClose}>
+      <div
+        className="tui-popup"
+        role="dialog"
+        aria-label="amp usage output"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="tui-popup__title">
+          <span className="tui-popup__title-text">─ amp usage ─</span>
+          <button
+            className="tui-popup__close"
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            title="Close (Esc)"
+          >
+            [ x ]
+          </button>
+        </div>
+
+        <div
+          className={
+            "tui-popup__body" +
+            (state.status === "error" ? " tui-popup__body--error" : "") +
+            (state.status === "loading" ? " tui-popup__body--loading" : "")
+          }
+        >
+          {state.status === "loading"
+            ? "running `amp usage`..."
+            : state.status === "error"
+              ? state.message
+              : state.output || "(no output)"}
+        </div>
+
+        <div className="tui-popup__hint">press Esc to close</div>
+      </div>
+    </div>
   );
 }
 
